@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %} 
+
+{% block content %}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-truck me-2"></i> {{ title }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-4">{{ form.vehicle_no|as_crispy_field }}</div>
+                        <div class="col-md-4">{{ form.vehicle_type|as_crispy_field }}</div>
+                        <div class="col-md-4">{{ form.ownership|as_crispy_field }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">{{ form.owner_name|as_crispy_field }}</div>
+                        <div class="col-md-6">{{ form.hypothecation|as_crispy_field }}</div>
+                    </div>
+                    
+                    <h6 class="mt-4 mb-3 text-muted">Documentation Expiry Dates</h6>
+                    <div class="row">
+                        <div class="col-md-4">{{ form.reg_date|as_crispy_field }}</div>
+                        <div class="col-md-4">{{ form.fitness_expiry|as_crispy_field }}</div>
+                        <div class="col-md-4">{{ form.permit_expiry|as_crispy_field }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">{{ form.insurance_expiry|as_crispy_field }}</div>
+                        <div class="col-md-4">{{ form.puc_expiry|as_crispy_field }}</div>
+                        <div class="col-md-4">{{ form.tax_expiry|as_crispy_field }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">{{ form.national_permit|as_crispy_field }}</div>
+                    </div>
+
+                    
+                    <button type="submit" class="btn btn-success mt-4"><i class="fas fa-save me-2"></i> Save Vehicle</button>
+                    <a href="{% url 'vehicle_list' %}" class="btn btn-secondary mt-4">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock content %}

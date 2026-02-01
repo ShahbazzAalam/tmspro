@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Driver Master{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1>Driver Master</h1>
+        <a href="{% url 'driver_create' %}" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add New Driver
+        </a>
+    </div>
+
+    {% if drivers %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Mobile</th>
+                    <th>License Expiry</th>
+                    <th>Wage Rate</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for driver in drivers %}
+                <tr>
+                    <td>{{ driver.driver_id }}</td>
+                    <td>{{ driver.name }}</td>
+                    <td>{{ driver.mobile }}</td>
+                    <td>{{ driver.license_expiry|date:"M d, Y" }}</td>
+                    <td>₹{{ driver.wage_rate|intcomma }}</td>
+                    <td>
+                        {% if driver.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'driver_update' pk=driver.pk %}" class="btn btn-sm btn-info me-2">Edit</a>
+                        
+                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ driver.pk }}">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-info" role="alert">
+        No drivers have been added yet. Click 'Add New Driver' to get started.
+    </div>
+    {% endif %}
+</div>
+
+{% for driver in drivers %}
+<div class="modal fade" id="deleteModal{{ driver.pk }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ driver.pk }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel{{ driver.pk }}">Confirm Deletion</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the driver <strong>{{ driver.name }}</strong> (ID: {{ driver.driver_id }})?</p>
+                <div class="alert alert-warning" role="alert">
+                    <i class="fas fa-exclamation-triangle"></i> This action cannot be undone.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                
+                <form method="post" action="{% url 'driver_delete' pk=driver.pk %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Yes, Delete Driver</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}

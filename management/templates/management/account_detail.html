@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'account_list' %}">Accounts</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ account.account_name }}</li>
+      </ol>
+    </nav>
+    
+    <h2 class="mb-4">Ledger: {{ account.account_name }}</h2>
+    
+    <div class="card p-3 mb-4">
+        <h4>Initial Balance: 
+            <span class="text-muted">
+            ₹{{ account.initial_balance|floatformat:2 }}
+            </span>
+        </h4>
+        <h4 class="mt-2">Calculated Current Balance: 
+            <span class="
+                {% if final_balance >= 0 %}text-success{% else %}text-danger{% endif %}
+            ">
+            ₹{{ final_balance|floatformat:2 }}
+            </span>
+        </h4>
+        <p class="text-muted">Type: {{ account.get_account_type_display }}</p>
+    </div>
+
+    <h4 class="mt-4">Transaction History (Ledger)</h4>
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr>
+                <th style="width: 10%;">Date</th>
+                <th style="width: 40%;">Description</th>
+                <th style="width: 15%;" class="text-end">Credit (₹)</th>
+                <th style="width: 15%;" class="text-end">Debit (₹)</th>
+                <th style="width: 20%;" class="text-end">Running Balance (₹)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td></td>
+                <td>**Initial Balance**</td>
+                <td class="text-end"></td>
+                <td class="text-end"></td>
+                <td class="text-end fw-bold text-primary">{{ account.initial_balance|floatformat:2 }}</td>
+            </tr>
+            
+            {% for entry in ledger_entries %}
+            <tr>
+                <td>{{ entry.date|date:"d M Y" }}</td>
+                <td>
+                    {{ entry.description }}
+                    {% if entry.related_trip %}
+                        <a href="{% url 'trip_detail' trip_id=entry.related_trip.trip_id %}" class="badge bg-secondary text-decoration-none ms-2">Trip: {{ entry.related_trip.trip_id }}</a>
+                    {% endif %}
+                </td>
+                <td class="text-end text-success">
+                    {% if entry.credit > 0 %}{{ entry.credit|floatformat:2 }}{% else %}-{% endif %}
+                </td>
+                <td class="text-end text-danger">
+                    {% if entry.debit > 0 %}{{ entry.debit|floatformat:2 }}{% else %}-{% endif %}
+                </td>
+                <td class="text-end fw-bold 
+                    {% if entry.current_balance >= 0 %}text-success{% else %}text-danger{% endif %}
+                ">
+                    {{ entry.current_balance|floatformat:2 }}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="text-center text-muted">No transactions recorded for this account after the initial balance.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock content %}

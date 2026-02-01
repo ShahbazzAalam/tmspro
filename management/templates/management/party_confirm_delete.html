@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6 offset-lg-3">
+        <div class="card shadow mb-4 border-left-danger">
+            <div class="card-header py-3 bg-danger text-white">
+                <h6 class="m-0 font-weight-bold">{{ title }}</h6>
+            </div>
+            <div class="card-body">
+                
+                {% if is_linked %}
+                    
+                    <div class="alert alert-warning" role="alert">
+                        <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Cannot Delete!</h4>
+                        <p>The party <strong>{{ party.name }}</strong> is currently associated with one or more trips.</p>
+                        <p class="mb-0">You must delete all associated trips or update them to use a different party before this record can be removed.</p>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <a href="{% url 'party_detail' pk=party.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i> Go Back to Details
+                        </a>
+                    </div>
+
+                {% else %}
+                    
+                    <p class="lead">Are you absolutely sure you want to delete the party:</p>
+                    <h2 class="text-danger mb-4">{{ party.name }} ({{ party.get_party_type_display }})?</h2>
+                    
+                    <div class="alert alert-danger" role="alert">
+                        <strong>Warning:</strong> This action is irreversible. All associated data will be lost.
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex justify-content-between mt-4">
+                            <button type="submit" class="btn btn-danger btn-icon-split">
+                                <span class="icon text-white-50"><i class="fas fa-trash"></i></span>
+                                <span class="text">Yes, Permanently Delete</span>
+                            </button>
+                            <a href="{% url 'party_list' %}" class="btn btn-secondary">
+                                No, Cancel
+                            </a>
+                        </div>
+                    </form>
+
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

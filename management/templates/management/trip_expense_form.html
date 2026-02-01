@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">{{ title }}</h4>
+                    <p class="mb-0 small">Vehicle: <strong>{{ trip.vehicle.license_plate }}</strong> | Driver: <strong>{{ trip.driver.name }}</strong></p>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label>{{ form.date.label }}</label>
+                                {{ form.date }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label>{{ form.expense_category.label }}</label>
+                                {{ form.expense_category }}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label>{{ form.amount.label }} (₹)</label>
+                                {{ form.amount }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label>{{ form.paid_via_account.label }}</label>
+                                {{ form.paid_via_account }}
+                                <small class="form-text text-muted">Leave blank if paid in cash by driver/transporter.</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label>{{ form.description.label }}</label>
+                            {{ form.description }}
+                        </div>
+
+                        <button type="submit" class="btn btn-warning mt-3">Record Expense</button>
+                        <a href="{% url 'trip_detail' trip_id=trip.trip_id %}" class="btn btn-secondary mt-3">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

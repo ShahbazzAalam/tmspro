@@ -1,0 +1,445 @@
+{% extends "base.html" %}
+
+{% load static %}
+{% load mathfilters %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'trip_list' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ trip.trip_id }}</li>
+    </ol>
+</nav>
+
+{# --- BEGIN REVISED TRIP HEADER CARD (Single Line) --- #}
+<style>
+    /* Custom styling for the header elements to ensure compactness */
+    .trip-header-item {
+        display: flex;
+        align-items: center;
+        padding: 5px 10px;
+        margin-right: 15px;
+        margin-bottom: 0; 
+        white-space: nowrap;
+        border-right: 1px solid #eee;
+    }
+    /* Remove border on the last item */
+    .trip-header-item:last-of-type {
+        border-right: none;
+    }
+    .trip-header-icon {
+        font-size: 1.2rem;
+        width: 20px;
+        text-align: center;
+        margin-right: 5px;
+    }
+    /* Style for the combination of label and value */
+    .trip-header-content {
+        line-height: 1;
+    }
+    .trip-header-label {
+        font-size: 0.7rem;
+        color: #6c757d;
+        margin-bottom: 0;
+        display: block;
+    }
+    .trip-header-value {
+        font-size: 0.9rem;
+        font-weight: bold;
+        margin-top: 0;
+        display: block;
+    }
+    .advance-percent {
+        font-size: 0.75rem;
+        margin-left: 5px;
+    }
+</style>
+
+<div class="card shadow mb-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Trip: {{ trip.trip_id }} ({{ trip.source_location }} - {{ trip.destination_location }})</h5>
+        <a href="{% url 'trip_update' trip_id=trip.trip_id %}" class="btn btn-sm btn-light">
+            <i class="fas fa-edit me-1"></i> Edit Trip
+        </a>
+    </div>
+    
+    <div class="card-body py-2 px-3">
+        
+        <div class="d-flex justify-content-start align-items-center flex-wrap">
+            
+            {# 1. Date Log #}
+            <div class="trip-header-item">
+                <span class="trip-header-icon text-primary"><i class="fas fa-calendar-alt"></i></span>
+                <div class="trip-header-content">
+                    <span class="trip-header-value">{{ trip.date|date:"d M Y" }}</span>
+                </div>
+            </div>
+
+            {# 2. Vehicle No #}
+            <div class="trip-header-item">
+                <span class="trip-header-icon text-secondary"><i class="fas fa-truck"></i></span>
+                <div class="trip-header-content">
+                    <span class="trip-header-value">{{ trip.vehicle.registration_no|default:trip.vehicle.vehicle_no }}</span>
+                </div>
+            </div>
+
+            {# 3. Transporter #}
+            <div class="trip-header-item">
+                <span class="trip-header-icon text-info"><i class="fas fa-industry"></i></span>
+                <div class="trip-header-content">
+                    <span class="trip-header-label">Transporter</span>
+                    <span class="trip-header-value">{{ trip.transporter.name|default:"Self"|truncatechars:12 }}</span>
+                </div>
+            </div>
+
+            {# 4. Driver Name #}
+            <div class="trip-header-item">
+                <span class="trip-header-icon text-danger"><i class="fas fa-user-circle"></i></span>
+                <div class="trip-header-content">
+                    <span class="trip-header-label">Driver</span>
+                    <span class="trip-header-value">{{ trip.driver.name|truncatechars:12 }}</span>
+                </div>
+            </div>
+
+            {# 5. Advance Status & Percentage (ADV) - LINKED TO FORM #}
+            <a href="{% url 'trip_record_advance' trip.trip_id %}" 
+            class="text-decoration-none text-dark trip-header-item"
+            title="Click to Record Received Advance">
+                <span class="trip-header-icon text-warning"><i class="fas fa-money-bill-wave"></i></span>
+                <div class="trip-header-content">
+                    {# Display the agreed advance amount for reference #}
+                    <span class="trip-header-label">Advance (Agreed: ₹{{ trip.advance|floatformat:2 }})</span>
+                    
+                    {# SHOW RECEIVED AMOUNT AND PERCENTAGE OF TOTAL FREIGHT #}
+                    <span class="trip-header-value">
+                        Rec: ₹{{ total_advance_received|floatformat:0 }}
+                        
+                        {# FINAL FIX: Check if the percentage value is set and not zero. #}
+                        {% if received_percent|floatformat:2 != '0.00' %}
+                            <span class="badge 
+                                {# Green if 100% or more of the FREIGHT has been received, otherwise Warning #}
+                                {% if received_percent >= 100 %}bg-success{% else %}bg-warning text-dark{% endif %} 
+                                advance-percent">
+                                
+                                {# Display the percentage of freight received, rounded to 2 decimal places #}
+                                {{ received_percent|floatformat:2 }}%
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary advance-percent">0%</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </a>
+            
+            {# 6. Settlement Status #}
+            {# The href is now '#' as requested by the user, stopping further form interaction #}
+            <a href="#" class="text-decoration-none text-dark trip-header-item">
+                <span class="trip-header-icon text-success"><i class="fas fa-handshake"></i></span>
+                <div class="trip-header-content">
+                    <span class="trip-header-label">Settlement</span>
+                    <span class="trip-header-value">
+                        {# Assuming trip.settlement_amount > 0 means settled #}
+                        {% if trip.settlement_amount and trip.settlement_amount > 0 %}
+                            <span class="badge text-bg-success">Done</span>
+                        {% else %}
+                            <span class="badge text-bg-secondary">Pending</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </a>
+            
+            {# 7. Trip Status Button (Dynamic) #}
+            <div id="trip-status-container" 
+                class="text-decoration-none text-dark trip-header-item">
+                
+                <span class="trip-header-icon text-info"><i class="fas fa-route"></i></span>
+                <div class="trip-header-content">
+                    <span class="trip-header-label">Status</span>
+                    <span id="current-trip-status" 
+                        class="trip-header-value badge 
+                                {% if trip.status == 'COMPLETED' %}bg-success{% elif trip.status == 'IN_TRANSIT' %}bg-warning text-dark{% else %}bg-secondary{% endif %}"
+                        data-bs-toggle="tooltip" 
+                        data-bs-placement="top" 
+                        title="{% if trip.status != 'COMPLETED' %}Click to Complete Trip{% else %}Trip Completed{% endif %}"
+                        {# NEW: Call the simplified completion function directly #}
+                        onclick="confirmAndComplete('{{ trip.status }}', '{{ trip.trip_id }}');">
+                        {{ trip.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+{# --- END REVISED TRIP HEADER CARD --- #}
+
+{# --- FINANCIAL OVERVIEW CARDS (REMAINS UNCHANGED) --- #}
+<div class="row text-center mb-4">
+    
+    <div class="col-md-4">
+        <div class="card h-100 p-3 border-primary">
+            <h6 class="mb-1">Total Revenue</h6>
+            <h4 class="text-primary">₹{{ total_revenue|floatformat:2 }}</h4>
+            <p class="small text-muted mb-0">
+                ({{ trip.total_freight|floatformat:2 }} Freight + {{ halting_amount|floatformat:2 }} Halting)
+            </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 p-3 border-danger">
+            <h6 class="mb-1">Total Expenses</h6>
+            <h4 class="text-danger">₹{{ total_expenses|default:"0.00"|floatformat:2 }}</h4>
+            <p class="small text-muted mb-0">
+                (Operational, Commission, Orai)
+            </p>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100 p-3 border-info">
+            <h6 class="mb-1">Net Profit/Loss</h6>
+            <h4 class="
+                {% if profit_loss >= 0 %}text-success{% else %}text-danger{% endif %}
+            ">
+                ₹{{ profit_loss|floatformat:2 }}
+            </h4>
+            <p class="small text-muted mb-0">
+                Revenue - Expenses/Deductions
+            </p>
+        </div>
+    </div>
+</div>
+
+<ul class="nav nav-tabs" id="tripTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="expenses-tab" data-bs-toggle="tab" data-bs-target="#expenses" type="button" role="tab" aria-controls="expenses" aria-selected="true">Add & View Costs</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="pnl-tab" data-bs-toggle="tab" data-bs-target="#pnl" type="button" role="tab" aria-controls="pnl" aria-selected="false">P&L and Financial Summary</button>
+    </li>
+</ul>
+
+<div class="tab-content pt-3" id="tripTabsContent">
+    
+    <div class="tab-pane fade show active" id="expenses" role="tabpanel" aria-labelledby="expenses-tab">
+        {% include 'management/includes/trip_expense_management.html' %}
+    </div>
+    
+    <div class="tab-pane fade" id="pnl" role="tabpanel" aria-labelledby="pnl-tab">
+        <p class="mb-0"><strong>Total Revenue:</strong> ₹{{ total_revenue|floatformat:2 }}</p>
+        <p class="mb-0 small text-muted">
+            ({{ trip.total_freight|floatformat:2 }} Freight + ₹{{ halting_amount|floatformat:2 }} Halting)
+        </p>
+        <p class="mb-0 small text-muted">
+            (Freight calculated as: {{ trip.rate|floatformat:2 }} Rate &times; {{ trip.weight|floatformat:2 }} Weight)
+        </p>
+        <hr>
+        <p class="mb-0"><strong>(-) Transporter Commission:</strong> ₹{{ trip.commission_amount|floatformat:2 }}</p>
+        <p class="mb-0"><strong>(-) Orai Charge:</strong> ₹{{ trip.orai_amount|floatformat:2 }}</p>
+        <p class="mb-0"><strong>(-) Operational Expenses (Fuel, Toll, etc.):</strong> ₹{{ total_expenses|floatformat:2 }}</p>
+        <hr>
+        <h5 class="
+            {% if profit_loss >= 0 %}text-success{% else %}text-danger{% endif %}
+        ">
+            Final Profit/Loss: ₹{{ profit_loss|floatformat:2 }}
+        </h5>
+    </div>
+</div>
+
+{# --- SONNER-LIKE TOAST HTML CONTAINER --- #}
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="statusToast" class="toast text-bg-secondary" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body d-flex justify-content-between align-items-center w-100">
+                <span id="toastMessage"></span>
+                <button id="undoStatusBtn" type="button" class="btn btn-sm btn-light ms-3">Undo</button>
+            </div>
+        </div>
+    </div>
+</div>
+{# --- END TOAST HTML --- #}
+
+{# --- BEGIN SCRIPTS --- #}
+
+{# 1. Original Expense Category Logic (Kept Intact) #}
+<script>
+    // Utility function to get the CSRF token from the cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Function to handle completion and display the Undo toast
+function confirmAndComplete(currentStatus, tripId) {
+    // 1. Define URLs (Keep these defined regardless of status for potential use)
+    const completeUrl = `{% url 'trip_status_complete' trip_id='REPLACE' %}`.replace('REPLACE', tripId);
+    const revertUrl = `{% url 'trip_status_revert' trip_id='REPLACE' %}`.replace('REPLACE', tripId);
+    
+    // --- NEW LOGIC: Check if already COMPLETED ---
+    if (currentStatus === 'COMPLETED') {
+        const redoConfirmed = confirm(
+            `Trip ${tripId} is currently COMPLETED. 
+            Do you want to revert the status back to 'In-transit' / 'In Progress'?`
+        );
+
+        if (redoConfirmed) {
+            // If confirmed, execute the revert action directly
+            // This assumes the global revertStatus(tripId, revertUrl) function is available.
+            revertStatus(tripId, revertUrl);
+        }
+        return; // Exit the function after handling the completed status
+    }
+    // --- END NEW LOGIC ---
+
+    // 2. Standard Confirmation (Only runs if status is NOT COMPLETED)
+    const confirmed = confirm(`Are you sure you want to change the status of Trip ${tripId} to Completed?`);
+    if (!confirmed) {
+        return;
+    }
+
+    // 3. Send AJAX Request to the Django View (Only runs if confirmed and status is not COMPLETED)
+    fetch(completeUrl, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrftoken, // CRITICAL: This must be present
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest', // Required by your view function check
+        },
+    })
+    .then(response => {
+        // Improved Error/Authentication Handling
+        if (response.status === 401) {
+            throw new Error("Your session has expired or you are logged out. Please log in to continue.");
+        }
+        
+        if (!response.ok) {
+            return response.json().then(data => { 
+                throw new Error(data.message || `Status update failed with status code ${response.status}. Check Django console.`); 
+            });
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // 4. Update the Status Badge on the page
+            // This assumes 'updateStatusUI' is defined elsewhere in your script.
+            updateStatusUI(data.new_status_display, data.new_status_class, 'Trip Completed'); 
+            
+            // CRITICAL: Update the global tripId for the undo listener
+            currentTripId = tripId;
+
+            // 5. Show the Bootstrap Toast notification
+            const toastElement = document.getElementById('statusToast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = `${data.message}`; 
+            
+            // Initialize or get the Toast instance
+            let bsToast = bootstrap.Toast.getInstance(toastElement);
+            if (!bsToast) {
+                 bsToast = new bootstrap.Toast(toastElement, {
+                    autohide: false, // Keep it visible until dismissed or undone
+                    delay: 10000 
+                });
+            }
+            bsToast.show();
+
+            // Set a timeout to dismiss the toast automatically after 10 seconds
+            setTimeout(() => {
+                if (toastElement.classList.contains('show')) {
+                    bsToast.hide();
+                }
+            }, 10000);
+            
+        } else {
+            alert(`Error updating status: ${data.message}`);
+        }
+    })
+    .catch(error => {
+        // Catches network errors or thrown errors from the .then(response) block
+        console.error('Fetch Error:', error);
+        alert(`Error updating status: ${error.message}`);
+    });
+}
+// Function to update the UI elements (Badge Text and Class)
+function updateStatusUI(statusDisplay, statusClass, tooltipTitle) {
+    const statusElement = document.getElementById('trip-status-badge');
+    
+    if (statusElement) {
+        // 1. Update the text displayed on the badge
+        statusElement.textContent = statusDisplay;
+        
+        // 2. Safely replace old Bootstrap background classes with the new one
+        // This regex removes any previous 'bg-' class (like bg-success, bg-warning, etc.)
+        statusElement.className = statusElement.className.replace(/\b(bg-\w+)\b/g, '').trim(); 
+        
+        // Add the new status class and some padding
+        statusElement.className += ` ${statusClass} p-2`; 
+        
+        // 3. Update the tooltip/hover text (optional, but good practice)
+        statusElement.setAttribute('title', tooltipTitle);
+        
+        // If you are using Bootstrap tooltips, you might need to re-initialize them
+        // to show the updated title, but this is usually not strictly necessary for simple titles.
+    }
+}
+
+    // Function to handle the Undo action
+    function revertStatus(tripId, revertUrl) {
+        fetch(revertUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken, 
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        .then(response => {
+            if (response.status === 401) {
+            throw new Error("Your session has expired or you are logged out. Please log in to continue.");
+        }
+        
+        if (!response.ok) {
+            return response.json().then(data => { 
+                throw new Error(data.message || `Revert failed with status code ${response.status}.`); 
+            });
+        }
+        return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+            // Success: Update the UI back to original (or In-transit)
+            // Assumes updateStatusUI function is defined
+            updateStatusUI(data.new_status_display, data.new_status_class, 'Click to Complete Trip');
+            
+            // Show success message
+            alert(data.message);
+            
+            // Optionally hide the toast if it was still visible
+            const toastElement = document.getElementById('statusToast');
+            bootstrap.Toast.getInstance(toastElement)?.hide();
+            
+        } else {
+            alert(`Error reverting status: ${data.message}`);
+        }
+    })
+        .catch(error => {
+            console.error('Revert Error:', error);
+            alert('Revert failed. Check console.');
+        });
+    }
+</script>
+{% endblock content %}

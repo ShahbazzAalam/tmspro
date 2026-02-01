@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 offset-lg-2">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">{{ title }}</h6>
+            </div>
+            <div class="card-body">
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.name|crispy }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.party_type|crispy }}
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.contact_person|crispy }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.phone_number|crispy }}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            {{ form.email|crispy }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.gst_number|crispy }}
+                        </div>
+                    </div>
+                    
+                    {{ form.address|crispy }}
+
+                    <div class="mt-4 d-flex justify-content-between">
+                        <button type="submit" class="btn btn-success btn-icon-split">
+                            <span class="icon text-white-50"><i class="fas fa-save"></i></span>
+                            <span class="text">Save Party</span>
+                        </button>
+                        <a href="{% url 'party_list' %}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
